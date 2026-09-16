@@ -54,14 +54,49 @@ $("#preview-button").addEventListener("click", async () => {
   catch (error) { toast((error as Error).message, true); }
 });
 
-$("#lookup-button").addEventListener("click", async () => {
-  const id = ($("#lookup-id") as HTMLInputElement).value.trim(); if (!id) return toast("Enter a ServiceRequest ID.", true);
+async function loadReferral(id: string) {
   const panel = $("#lookup-result"); panel.className = "result-panel"; panel.textContent = "Loading…";
   try {
     const result = await api(`/api/referrals/${encodeURIComponent(id)}`) as Json; showResponse(result, `Referral ${id}`);
     const sr = result.serviceRequest as Json; const tasks = result.tasks as Json; const taskEntries = (tasks.entry as Array<Json> | undefined) ?? [];
-    panel.innerHTML = `<div class="success-summary"><h3>${String(((sr.identifier as Array<Json>)?.[0]?.value) ?? `ServiceRequest/${id}`)}</h3><div class="id-grid"><div><small>SERVICE REQUEST</small><strong>${String(sr.id ?? id)}</strong></div><div><small>STATUS</small><strong>${String(sr.status ?? "unknown")}</strong></div><div><small>LINKED TASKS</small><strong>${taskEntries.length}</strong></div></div></div>`;
+    const task = taskEntries[0]?.resource as Json | undefined;
+    const taskStatus = String(task?.status ?? "not found");
+    const taskId = String(task?.id ?? "");
+    const performer = (sr.performer as Array<Json> | undefined)?.[0];
+    const receivingOrganizationId = String(performer?.reference ?? "").split("/").at(-1) ?? "";
+    const referralNumber = String(((sr.identifier as Array<Json>)?.[0]?.value) ?? `ServiceRequest/${id}`);
+    panel.replaceChildren();
+    const summary = document.createElement("div"); summary.className = "success-summary";
+    const heading = document.createElement("h3"); heading.textContent = referralNumber; summary.append(heading);
+    const grid = document.createElement("div"); grid.className = "id-grid";
+    for (const [label, display] of [["SERVICE REQUEST", String(sr.id ?? id)], ["SERVICE REQUEST STATUS", String(sr.status ?? "unknown")], ["TASK STATUS", taskStatus]]) {
+      const cell = document.createElement("div"); const small = document.createElement("small"); const strong = document.createElement("strong");
+      small.textContent = label; strong.textContent = display; cell.append(small, strong); grid.append(cell);
+    }
+    summary.append(grid);
+    if (taskId && (taskStatus === "requested" || taskStatus === "received")) {
+      const actions = document.createElement("div"); actions.className = "workflow-actions";
+      const button = document.createElement("button");
+      const nextStatus = taskStatus === "requested" ? "received" : "accepted";
+      button.textContent = nextStatus === "received" ? "Mark as Received" : "Accept Referral";
+      button.addEventListener("click", async () => {
+        button.disabled = true; button.textContent = nextStatus === "received" ? "Marking received…" : "Accepting…";
+        try {
+          const updated = await api(`/api/tasks/${encodeURIComponent(taskId)}/status`, {
+            method: "PATCH", body: JSON.stringify({ status: nextStatus, receivingOrganizationId })
+          });
+          showResponse(updated, `Task ${taskId} marked ${nextStatus}`); toast(`Referral ${nextStatus}.`); await loadReferral(id);
+        } catch (error) { const e = error as Error & { data?: unknown }; showResponse(e.data ?? { error: e.message }, "Status update failed"); toast(e.message, true); button.disabled = false; }
+      });
+      actions.append(button); summary.append(actions);
+    }
+    panel.append(summary);
   } catch (error) { panel.textContent = (error as Error).message; toast((error as Error).message, true); }
+}
+
+$("#lookup-button").addEventListener("click", async () => {
+  const id = ($("#lookup-id") as HTMLInputElement).value.trim(); if (!id) return toast("Enter a ServiceRequest ID.", true);
+  await loadReferral(id);
 });
 
 $("#copy-response").addEventListener("click", async () => { await navigator.clipboard.writeText(JSON.stringify(latestResponse, null, 2)); toast("JSON copied to clipboard."); });
