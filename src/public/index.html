@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="PH eReferral Connectathon demonstration system" />
+  <title>PH eReferral Connectathon</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">+</span><div><strong>PH eReferral</strong><small>R12 Connectathon</small></div></div>
+    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection-text">Checking FHIR server…</span></div>
+  </header>
+  <main>
+    <section class="hero">
+      <div><p class="eyebrow">INTEROPERABLE CARE COORDINATION</p><h1>Create and send a referral</h1><p>Submit a standards-based FHIR R4 referral transaction to the PH eReferral Connectathon server.</p></div>
+      <div class="server-card"><span>FHIR endpoint</span><strong id="fhir-url">Loading…</strong><small id="team-code"></small></div>
+    </section>
+    <nav class="tabs" aria-label="Main navigation">
+      <button class="tab active" data-view="create">New referral</button>
+      <button class="tab" data-view="search">Referral lookup</button>
+      <button class="tab" data-view="response">API response</button>
+    </nav>
+
+    <section id="create" class="view active">
+      <form id="referral-form">
+        <div class="section-heading"><span>01</span><div><h2>Patient information</h2><p>Identity and address using PSGC codes</p></div></div>
+        <div class="card grid three">
+          <label>First name<input name="givenName" value="Maria" required /></label>
+          <label>Middle name<input name="middleName" value="Test" /></label>
+          <label>Last name<input name="familyName" value="Santos" required /></label>
+          <label>Birth date<input name="birthDate" type="date" value="1988-03-12" required /></label>
+          <label>Administrative gender<select name="gender"><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="unknown">Unknown</option></select></label>
+          <label>Mobile number<input name="phone" value="+639000000000" required /></label>
+          <label class="span-3">Street / address line<input name="addressLine" value="R12 Connectathon Training Address" required /></label>
+          <label>Region PSGC<input name="regionCode" value="1200000000" required /></label>
+          <label>Region name<input name="regionName" value="Region XII (SOCCSKSARGEN)" required /></label>
+          <label>Province PSGC<input name="provinceCode" value="1206300000" required /></label>
+          <label>Province name<input name="provinceName" value="South Cotabato" required /></label>
+          <label>City PSGC<input name="cityCode" value="1206306000" required /></label>
+          <label>City name<input name="cityName" value="City of Koronadal" required /></label>
+          <label>Barangay PSGC<input name="barangayCode" value="1206306001" required /></label>
+          <label>Barangay name<input name="barangayName" value="Assumption" required /></label>
+          <label>Postal code<input name="postalCode" value="9506" /></label>
+        </div>
+
+        <div class="section-heading"><span>02</span><div><h2>Referral details</h2><p>Clinical reason, observation, and referring practitioner</p></div></div>
+        <div class="card grid three">
+          <label>Referrer first name<input name="practitionerGivenName" value="Rosa" required /></label>
+          <label>Referrer last name<input name="practitionerFamilyName" value="Demo" required /></label>
+          <label>License / local ID<input name="licenseNumber" placeholder="e.g. TEAM04-PRC-001" required /></label>
+          <label>Priority<select name="priority"><option value="urgent">Urgent</option><option value="routine">Routine</option><option value="asap">ASAP</option><option value="stat">STAT</option></select></label>
+          <label>SNOMED diagnosis code<input name="diagnosisCode" value="398254007" required /></label>
+          <label>Diagnosis display<input name="diagnosisDisplay" value="Pre-eclampsia" required /></label>
+          <label>Referral reason code<input name="reasonCode" value="71388002" required /></label>
+          <label class="span-2">Referral reason<input name="reasonDisplay" value="Urgent referral for management" required /></label>
+          <label>Systolic BP<input name="systolic" type="number" value="180" min="40" max="300" required /></label>
+          <label>Diastolic BP<input name="diastolic" type="number" value="110" min="20" max="200" required /></label>
+          <label class="span-3">Clinical notes<textarea name="clinicalNotes" rows="4" required>32 weeks AOG with severe headache and visual symptoms.</textarea></label>
+        </div>
+        <div class="actions"><button type="button" id="preview-button" class="secondary">Preview FHIR Bundle</button><button type="submit" id="send-button">Create &amp; Send Referral <span>→</span></button></div>
+      </form>
+    </section>
+
+    <section id="search" class="view">
+      <div class="section-heading"><span>03</span><div><h2>Referral lookup</h2><p>Read a ServiceRequest and its linked Task</p></div></div>
+      <div class="card lookup"><label>ServiceRequest logical ID<input id="lookup-id" placeholder="Example: 123" /></label><button id="lookup-button">Find referral</button></div>
+      <div id="lookup-result" class="result-panel empty">Enter a ServiceRequest ID.</div>
+    </section>
+
+    <section id="response" class="view">
+      <div class="section-heading"><span>{ }</span><div><h2>FHIR API response</h2><p>Latest request result or preview</p></div></div>
+      <div class="response-toolbar"><span id="response-status">No request sent yet</span><button id="copy-response" class="small secondary">Copy JSON</button></div>
+      <pre id="response-json">{}</pre>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
