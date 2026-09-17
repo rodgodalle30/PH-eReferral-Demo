@@ -9,6 +9,7 @@
     />
     <title>PH eReferral Connectathon</title>
     <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/incoming.css" />
   </head>
   <body>
     <header class="topbar">
@@ -37,6 +38,7 @@
       </section>
       <nav class="tabs" aria-label="Main navigation">
         <button class="tab active" data-view="create">New referral</button>
+        <button class="tab" data-view="incoming">Incoming referrals</button>
         <button class="tab" data-view="search">Referral lookup</button>
         <button class="tab" data-view="response">API response</button>
       </nav>
@@ -219,9 +221,27 @@
         </form>
       </section>
 
+      <section id="incoming" class="view">
+        <div class="section-heading incoming-heading">
+          <span>03</span>
+          <div><h2>Incoming referrals</h2><p id="incoming-subtitle">Referrals sent to your facility</p></div>
+          <button id="refresh-incoming" class="secondary">Refresh</button>
+        </div>
+        <div class="card table-card">
+          <div class="table-toolbar">
+            <label>Filter by status<select id="incoming-status"><option value="all">All referrals</option><option value="requested">Requested</option><option value="received">Received</option><option value="accepted">Accepted</option></select></label>
+            <span id="incoming-count">0 referrals</span>
+          </div>
+          <div class="table-scroll"><table>
+            <thead><tr><th>Referral</th><th>Patient</th><th>From facility</th><th>Reason</th><th>Priority</th><th>Received</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="incoming-rows"><tr><td colspan="8" class="table-message">Loading referrals…</td></tr></tbody>
+          </table></div>
+        </div>
+      </section>
+
       <section id="search" class="view">
         <div class="section-heading">
-          <span>03</span>
+          <span>04</span>
           <div>
             <h2>Referral lookup</h2>
             <p>Read a ServiceRequest and its linked Task</p>

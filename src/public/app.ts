@@ -3,6 +3,8 @@ const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>
 const form = $("#referral-form") as HTMLFormElement;
 const responseJson = $("#response-json");
 let latestResponse: unknown = {};
+type IncomingReferral = { id:string; referralNumber:string; patientName:string; birthDate:string; referringFacility:string; priority:string; reason:string; authoredOn:string; status:string; taskId:string; receivingOrganizationId:string };
+let incomingReferrals: IncomingReferral[] = [];
 
 function toast(message: string, error = false) {
   const element = $("#toast"); element.textContent = message; element.className = error ? "show error" : "show";
@@ -36,7 +38,59 @@ function payload() {
   };
 }
 
-document.querySelectorAll<HTMLButtonElement>(".tab").forEach(button => button.addEventListener("click", () => setView(button.dataset.view!)));
+document.querySelectorAll<HTMLButtonElement>(".tab").forEach(button => button.addEventListener("click", () => {
+  setView(button.dataset.view!);
+  if (button.dataset.view === "incoming") void loadIncomingReferrals();
+}));
+
+function formatDate(value: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.valueOf()) ? value : new Intl.DateTimeFormat("en-PH", { dateStyle:"medium", timeStyle:"short" }).format(date);
+}
+function renderIncomingReferrals() {
+  const status = ($("#incoming-status") as HTMLSelectElement).value;
+  const referrals = incomingReferrals.filter(item => status === "all" || item.status === status);
+  $("#incoming-count").textContent = `${referrals.length} referral${referrals.length === 1 ? "" : "s"}`;
+  const body = $("#incoming-rows"); body.replaceChildren();
+  if (!referrals.length) {
+    const row = document.createElement("tr"); const cell = document.createElement("td"); cell.colSpan = 8; cell.className = "table-message";
+    cell.textContent = incomingReferrals.length ? "No referrals match this status." : "No incoming referrals found."; row.append(cell); body.append(row); return;
+  }
+  for (const referral of referrals) {
+    const row = document.createElement("tr");
+    const values = [referral.referralNumber, referral.patientName, referral.referringFacility, referral.reason, referral.priority, formatDate(referral.authoredOn), referral.status];
+    values.forEach((text, index) => {
+      const cell = document.createElement("td"); cell.textContent = text;
+      if (index === 0) cell.className = "referral-id";
+      if (index === 4) cell.className = `priority ${referral.priority}`;
+      if (index === 6) { cell.textContent = ""; const badge = document.createElement("span"); badge.className = `status ${referral.status}`; badge.textContent = referral.status; cell.append(badge); }
+      row.append(cell);
+    });
+    const action = document.createElement("td");
+    if (referral.taskId && ["requested", "received"].includes(referral.status)) {
+      const button = document.createElement("button"); button.className = "small";
+      const nextStatus = referral.status === "requested" ? "received" : "accepted"; button.textContent = nextStatus === "received" ? "Mark received" : "Accept";
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        try { await api(`/api/tasks/${encodeURIComponent(referral.taskId)}/status`, { method:"PATCH", body:JSON.stringify({ status:nextStatus, receivingOrganizationId:referral.receivingOrganizationId }) }); toast(`Referral marked ${nextStatus}.`); await loadIncomingReferrals(); }
+        catch (error) { toast((error as Error).message, true); button.disabled = false; }
+      }); action.append(button);
+    } else action.textContent = "—";
+    row.append(action); body.append(row);
+  }
+}
+async function loadIncomingReferrals() {
+  const button = $("#refresh-incoming") as HTMLButtonElement; button.disabled = true;
+  $("#incoming-rows").innerHTML = '<tr><td colspan="8" class="table-message">Loading referrals…</td></tr>';
+  try {
+    const result = await api("/api/referrals/incoming") as Json; incomingReferrals = (result.referrals as IncomingReferral[]) ?? [];
+    $("#incoming-subtitle").textContent = `Referrals sent to ${String(result.receivingFacility ?? "your facility")}`; renderIncomingReferrals();
+  } catch (error) { $("#incoming-rows").textContent = ""; const row = document.createElement("tr"); const cell = document.createElement("td"); cell.colSpan = 8; cell.className = "table-message error-message"; cell.textContent = (error as Error).message; row.append(cell); $("#incoming-rows").append(row); toast((error as Error).message, true); }
+  finally { button.disabled = false; }
+}
+$("#refresh-incoming").addEventListener("click", () => void loadIncomingReferrals());
+$("#incoming-status").addEventListener("change", renderIncomingReferrals);
 
 form.addEventListener("submit", async event => {
   event.preventDefault(); if (!form.reportValidity()) return;
